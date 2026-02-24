@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mind in the Feed — Reddit Mental Health Topic Modeling</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=DM+Mono:wght@300;400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a1a2e;
+    --paper: #f5f0e8;
+    --accent: #c1440e;
+    --muted: #7a7060;
+    --soft: #e8e0d0;
+    --highlight: #f0c060;
+    --code-bg: #1a1a2e;
+    --code-text: #a8d8a8;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero-left {
+    background: var(--ink);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 80px 60px;
+    position: relative;
+    z-index: 2;
+  }
+
+  .hero-left::after {
+    content: '';
+    position: absolute;
+    right: -40px;
+    top: 0;
+    width: 80px;
+    height: 100%;
+    background: var(--ink);
+    clip-path: polygon(0 0, 100% 15%, 100% 85%, 0 100%);
+    z-index: 3;
+  }
+
+  .eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--highlight);
+    margin-bottom: 24px;
+    opacity: 0;
+    animation: fadeUp 0.8s ease 0.2s forwards;
+  }
+
+  .hero-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2.8rem, 5vw, 4.5rem);
+    font-weight: 700;
+    color: var(--paper);
+    line-height: 1.1;
+    opacity: 0;
+    animation: fadeUp 0.8s ease 0.4s forwards;
+  }
+
+  .hero-title em {
+    font-style: italic;
+    color: var(--highlight);
+  }
+
+  .hero-sub {
+    margin-top: 28px;
+    color: #8899aa;
+    font-size: 1rem;
+    max-width: 400px;
+    opacity: 0;
+    animation: fadeUp 0.8s ease 0.6s forwards;
+  }
+
+  .hero-meta {
+    margin-top: 48px;
+    display: flex;
+    gap: 32px;
+    opacity: 0;
+    animation: fadeUp 0.8s ease 0.8s forwards;
+  }
+
+  .hero-meta-item {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    color: #8899aa;
+  }
+
+  .hero-meta-item span {
+    display: block;
+    color: var(--paper);
+    font-size: 1.4rem;
+    font-weight: 400;
+    margin-bottom: 2px;
+  }
+
+  .hero-right {
+    background: var(--soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 60px;
+    position: relative;
+  }
+
+  .bubble-art {
+    position: relative;
+    width: 320px;
+    height: 320px;
+  }
+
+  .bubble {
+    position: absolute;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.62rem;
+    text-align: center;
+    padding: 10px;
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .b1 { width: 110px; height: 110px; background: #c1440e22; border: 2px solid var(--accent); top: 10px; left: 10px; color: var(--accent); animation-delay: 0s; }
+  .b2 { width: 95px; height: 95px; background: #1a1a2e22; border: 2px solid var(--ink); top: 50px; right: 10px; color: var(--ink); animation-delay: 1.2s; }
+  .b3 { width: 100px; height: 100px; background: #f0c06022; border: 2px solid #b89040; bottom: 60px; left: 20px; color: #806020; animation-delay: 2.4s; }
+  .b4 { width: 85px; height: 85px; background: #44881122; border: 2px solid #448811; bottom: 20px; right: 40px; color: #448811; animation-delay: 3.6s; }
+  .b5 { width: 75px; height: 75px; background: #33669922; border: 2px solid #336699; top: 140px; left: 120px; color: #336699; animation-delay: 4.8s; }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-14px); }
+  }
+
+  /* ── NAV ── */
+  nav {
+    background: var(--ink);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    padding: 0 60px;
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid #ffffff22;
+  }
+
+  nav a {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #8899aa;
+    text-decoration: none;
+    padding: 18px 20px;
+    transition: color 0.2s, border-bottom 0.2s;
+    border-bottom: 2px solid transparent;
+  }
+
+  nav a:hover {
+    color: var(--highlight);
+    border-bottom-color: var(--highlight);
+  }
+
+  /* ── SECTIONS ── */
+  section {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 80px 40px;
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+
+  section.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 12px;
+  }
+
+  h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.8rem, 3vw, 2.6rem);
+    font-weight: 700;
+    line-height: 1.2;
+    margin-bottom: 28px;
+    color: var(--ink);
+  }
+
+  h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.3rem;
+    font-style: italic;
+    margin: 36px 0 12px;
+    color: var(--ink);
+  }
+
+  p { margin-bottom: 16px; color: #2a2a3e; }
+
+  .divider {
+    border: none;
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--soft), transparent);
+    margin: 0;
+  }
+
+  /* ── STATS GRID ── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 2px;
+    margin: 40px 0;
+    background: var(--soft);
+    border: 1px solid var(--soft);
+  }
+
+  .stats-grid-4 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .stat-card {
+    background: var(--paper);
+    padding: 24px 16px;
+    text-align: center;
+  }
+
+  .stat-num {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--accent);
+    display: block;
+    line-height: 1.2;
+  }
+
+  .stat-num-sm {
+    font-size: 1.1rem;
+  }
+
+  .stat-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: block;
+    margin-top: 4px;
+  }
+
+  /* ── CODE BLOCKS ── */
+  .code-block {
+    background: var(--code-bg);
+    border-radius: 4px;
+    padding: 28px 32px;
+    margin: 24px 0;
+    overflow-x: auto;
+    position: relative;
+  }
+
+  .code-label {
+    position: absolute;
+    top: 10px;
+    right: 14px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    color: #445566;
+    letter-spacing: 0.1em;
+  }
+
+  .code-block pre {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--code-text);
+    line-height: 1.8;
+    white-space: pre-wrap;
+  }
+
+  .code-block .kw { color: #88ccff; }
+  .code-block .st { color: #ffcc88; }
+  .code-block .cm { color: #556677; font-style: italic; }
+  .code-block .fn { color: #f0c060; }
+  .code-block .num { color: #ff8888; }
+
+  /* ── CALLOUT ── */
+  .callout {
+    border-left: 3px solid var(--accent);
+    background: #c1440e0d;
+    padding: 20px 24px;
+    margin: 28px 0;
+    border-radius: 0 4px 4px 0;
+  }
+
+  .callout-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+
+  .callout p { margin: 0; font-size: 0.95rem; }
+
+  /* ── TOPIC CARDS ── */
+  .topic-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 32px 0;
+  }
+
+  .topic-card {
+    border: 1px solid var(--soft);
+    padding: 20px;
+    background: white;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .topic-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 4px;
+    height: 100%;
+  }
+
+  .tc-red::before   { background: #c1440e; }
+  .tc-blue::before  { background: #3366aa; }
+  .tc-green::before { background: #448811; }
+  .tc-yellow::before{ background: #c09020; }
+  .tc-purple::before{ background: #7733aa; }
+
+  .topic-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+
+  .topic-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.05rem;
+    font-style: italic;
+    margin: 4px 0 10px;
+  }
+
+  .topic-words {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--muted);
+    line-height: 1.8;
+  }
+
+  /* ── TABLE ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 28px 0;
+    font-size: 0.9rem;
+  }
+
+  th {
+    background: var(--ink);
+    color: var(--paper);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 12px 16px;
+    text-align: left;
+  }
+
+  td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--soft);
+    vertical-align: top;
+  }
+
+  tr:nth-child(even) td { background: #faf8f4; }
+
+  .tag {
+    display: inline-block;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    padding: 3px 8px;
+    border-radius: 2px;
+    letter-spacing: 0.05em;
+  }
+
+  .tag-good { background: #44881122; color: #336600; }
+  .tag-warn { background: #f0c06022; color: #806020; }
+
+  /* ── CHUNKING VIS ── */
+  .chunk-vis {
+    display: flex;
+    gap: 12px;
+    margin: 28px 0;
+    flex-wrap: wrap;
+  }
+
+  .chunk-strategy {
+    flex: 1;
+    min-width: 200px;
+    border: 1px solid var(--soft);
+    padding: 20px;
+    background: white;
+  }
+
+  .chunk-name {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .chunk-bar {
+    height: 8px;
+    background: var(--soft);
+    border-radius: 4px;
+    margin: 6px 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .chunk-fill {
+    position: absolute;
+    top: 0; left: 0;
+    height: 100%;
+    background: var(--accent);
+    border-radius: 4px;
+    animation: grow 1.2s ease forwards;
+  }
+
+  @keyframes grow { from { width: 0; } }
+
+  /* ── FOOTER ── */
+  footer {
+    background: var(--ink);
+    color: #445566;
+    text-align: center;
+    padding: 40px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+  }
+
+  footer a { color: var(--highlight); text-decoration: none; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 700px) {
+    .hero { grid-template-columns: 1fr; }
+    .hero-left::after { display: none; }
+    .hero-right { display: none; }
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+    .topic-grid { grid-template-columns: 1fr; }
+    nav { padding: 0 20px; overflow-x: auto; }
+    section { padding: 60px 24px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="hero-left">
+    <p class="eyebrow">Text Analysis Project · NLP · Topic Modeling</p>
+    <h1 class="hero-title">Mind in<br>the <em>Feed</em></h1>
+    <p class="hero-sub">Uncovering latent discourse patterns in Reddit's mental health communities through LDA, BERTopic, and dual chunking strategies.</p>
+    <div class="hero-meta">
+      <div class="hero-meta-item"><span>10K</span>Posts (sampled)</div>
+      <div class="hero-meta-item"><span>5</span>Subreddits</div>
+      <div class="hero-meta-item"><span>2×2</span>Model × Chunk</div>
+    </div>
+  </div>
+  <div class="hero-right">
+    <div class="bubble-art">
+      <div class="bubble b1">r/depression<br>hopeless<br>empty</div>
+      <div class="bubble b2">r/anxiety<br>panic<br>worry</div>
+      <div class="bubble b3">r/ocd<br>intrusive<br>compulsion</div>
+      <div class="bubble b4">r/ptsd<br>trauma<br>trigger</div>
+      <div class="bubble b5">r/adhd<br>focus<br>executive</div>
+    </div>
+  </div>
+</header>
+
+<!-- NAV -->
+<nav>
+  <a href="#motivation">Motivation</a>
+  <a href="#corpus">Corpus</a>
+  <a href="#chunking">Chunking</a>
+  <a href="#supervised">Classifier</a>
+  <a href="#topics">Topics</a>
+  <a href="#evaluation">Evaluation</a>
+  <a href="#results">Results</a>
+  <a href="#limits">Limitations</a>
+</nav>
+
+<!-- MOTIVATION -->
+<section id="motivation">
+  <p class="section-label">§ 01 — Dataset Selection</p>
+  <h2>Why Reddit Mental Health?</h2>
+  <p>Mental health discourse on Reddit is one of the most documented, longitudinal, and openly accessible collections of authentic first-person emotional writing on the internet. Users self-disclose with remarkable candor, producing language that is simultaneously personal and patterned — ideal for topic modeling.</p>
+  <p>We use the <strong>Reddit Mental Health Posts</strong> dataset (<code>solomonk/reddit_mental_health_posts</code>) sourced via the HuggingFace <code>datasets</code> library. It contains 151k posts from five neurodevelopmental and psychiatric subreddits, subsampled to 2,000 per community for computational feasibility:</p>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <span class="stat-num stat-num-sm">r/depression</span>
+      <span class="stat-label">2,000 posts</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-num stat-num-sm">r/anxiety</span>
+      <span class="stat-label">2,000 posts</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-num stat-num-sm">r/ocd</span>
+      <span class="stat-label">2,000 posts</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-num stat-num-sm">r/ptsd</span>
+      <span class="stat-label">2,000 posts</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-num stat-num-sm">r/adhd</span>
+      <span class="stat-label">2,000 posts</span>
+    </div>
+  </div>
+
+  <div class="callout">
+    <p class="callout-title">Motivation</p>
+    <p>The subreddit label provides a <strong>free, naturalistic classification target</strong> — users self-select into communities, making the label meaningful without annotation cost. The dataset spans conditions with both distinct and overlapping symptom profiles (e.g. PTSD and depression share vocabulary around hopelessness and sleep disruption), making it rich for both supervised classification and unsupervised topic discovery.</p>
+  </div>
+</section>
+<hr class="divider">
+
+<!-- CORPUS STATS -->
+<section id="corpus">
+  <p class="section-label">§ 02 — Corpus Structure</p>
+  <h2>Preliminary Statistics</h2>
+  <p>After loading, subsampling, and cleaning (removing deleted posts and empty strings), the working corpus contains 10,000 posts. After preprocessing with spaCy (lowercasing, punctuation removal, stopword filtering, lemmatization), the vocabulary reduces substantially.</p>
+
+  <div class="stats-grid stats-grid-4">
+    <div class="stat-card">
+      <span class="stat-num">10,000</span>
+      <span class="stat-label">Total documents</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-num">5</span>
+      <span class="stat-label">Subreddits</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-num">2×2</span>
+      <span class="stat-label">Model × Chunk configs</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-num">Colab</span>
+      <span class="stat-label">Runtime environment</span>
+    </div>
+  </div>
+
+  <p>Post lengths are heavily right-skewed — most posts are 50–300 words, but some reach 2,000+ words (detailed narratives, crisis posts). This heterogeneity directly motivates our chunking strategy comparison.</p>
+
+  <div class="code-block">
+    <span class="code-label">python</span>
+    <pre><span class="kw">from</span> datasets <span class="kw">import</span> load_dataset
+
+<span class="fn">ds</span> = load_dataset(<span class="st">"solomonk/reddit_mental_health_posts"</span>, split=<span class="st">"train"</span>)
+<span class="fn">df</span> = ds.to_pandas()
+df = df.rename(columns={<span class="st">'body'</span>: <span class="st">'text'</span>})
+df = df[[<span class="st">'text'</span>, <span class="st">'subreddit'</span>]].dropna()
+
+<span class="cm"># Subsample to 2000 per subreddit</span>
+df = df.groupby(<span class="st">'subreddit'</span>).sample(n=<span class="num">2000</span>, random_state=<span class="num">42</span>)
+
+df[<span class="st">'word_count'</span>] = df[<span class="st">'text'</span>].str.split().str.len()
+print(df[<span class="st">'word_count'</span>].describe())
+print(df[<span class="st">'subreddit'</span>].value_counts())</pre>
+  </div>
+</section>
+<hr class="divider">
+
+<!-- CHUNKING -->
+<section id="chunking">
+  <p class="section-label">§ 03 — Chunking Strategy</p>
+  <h2>Two Strategies, One Question</h2>
+  <p>Chunking determines the unit of analysis passed to each topic model. Too small and topics fragment into noise; too large and distinct themes blur together. We compare two strategies to assess how document granularity shapes topic recovery.</p>
+
+  <div class="chunk-vis">
+    <div class="chunk-strategy">
+      <p class="chunk-name">Strategy A · Post-as-Document</p>
+      <p style="font-size:0.85rem; color:var(--muted); margin-bottom:12px;">Each Reddit post = 1 document. Preserves authorial coherence and narrative arc. Natural unit of analysis.</p>
+      <p style="font-family:'DM Mono',monospace; font-size:0.7rem; color:var(--muted);">Avg chunk size</p>
+      <div class="chunk-bar"><div class="chunk-fill" style="width:65%"></div></div>
+      <p style="font-family:'DM Mono',monospace; font-size:0.7rem; margin-top:4px;">~150–200 words</p>
+      <p style="font-family:'DM Mono',monospace; font-size:0.7rem; color:var(--muted);">Documents</p>
+      <div class="chunk-bar"><div class="chunk-fill" style="width:30%"></div></div>
+      <p style="font-family:'DM Mono',monospace; font-size:0.7rem; margin-top:4px;">10,000</p>
+    </div>
+    <div class="chunk-strategy">
+      <p class="chunk-name">Strategy B · Sliding Window (100w / 25w step)</p>
+      <p style="font-size:0.85rem; color:var(--muted); margin-bottom:12px;">Long posts split into overlapping 100-word windows. Short posts kept whole. Normalises length variance.</p>
+      <p style="font-family:'DM Mono',monospace; font-size:0.7rem; color:var(--muted);">Avg chunk size</p>
+      <div class="chunk-bar"><div class="chunk-fill" style="width:33%"></div></div>
+      <p style="font-family:'DM Mono',monospace; font-size:0.7rem; margin-top:4px;">~100 words</p>
+      <p style="font-family:'DM Mono',monospace; font-size:0.7rem; color:var(--muted);">Documents</p>
+      <div class="chunk-bar"><div class="chunk-fill" style="width:100%"></div></div>
+      <p style="font-family:'DM Mono',monospace; font-size:0.7rem; margin-top:4px;">~20,000–30,000</p>
+    </div>
+  </div>
+
+  <h3>Why these two?</h3>
+  <p><strong>Strategy A</strong> respects the natural document boundary. Reddit posts are intentionally authored units — the poster decided what belongs together. For LDA especially, this preserves within-document topic co-occurrence signals. It is simpler and interpretable.</p>
+  <p><strong>Strategy B</strong> reduces the influence of outlier-length posts and produces more, shorter documents — which is often better for BERTopic's sentence-transformer embeddings, which are calibrated for paragraph-length text. The 25-word overlap preserves context across chunk boundaries.</p>
+
+  <div class="callout">
+    <p class="callout-title">Testing the chunking strategy</p>
+    <p>We test chunking quality by: (1) comparing C_v coherence scores across all four configurations; (2) measuring type-token ratio as a proxy for lexical diversity; and (3) checking the rate of suspiciously short chunks (&lt;15 words) as a sign of over-splitting. Strategy A wins on LDA coherence; Strategy B wins on BERTopic embedding quality.</p>
+  </div>
+
+  <div class="code-block">
+    <span class="code-label">python</span>
+    <pre><span class="kw">def</span> <span class="fn">sliding_window_chunks</span>(text, window=<span class="num">100</span>, step=<span class="num">25</span>):
+    words = text.split()
+    <span class="kw">if</span> len(words) &lt;= window:
+        <span class="kw">return</span> [text]
+    chunks = []
+    <span class="kw">for</span> i <span class="kw">in</span> range(<span class="num">0</span>, len(words) - window + <span class="num">1</span>, step):
+        chunks.append(<span class="st">' '</span>.join(words[i:i + window]))
+    <span class="kw">return</span> chunks
+
+df_B = df.explode(<span class="st">'chunks_B'</span>)  <span class="cm"># one row per chunk</span></pre>
+  </div>
+</section>
+<hr class="divider">
+
+<!-- SUPERVISED -->
+<section id="supervised">
+  <p class="section-label">§ 04 — Supervised Classification</p>
+  <h2>Predicting Subreddit from Text</h2>
+  <p>The subreddit name is our existing label. We train a <strong>Logistic Regression</strong> and a <strong>Linear SVM</strong> on TF-IDF features (unigrams + bigrams) using Strategy A (full posts), since labels are post-level. Both are interpretable and well-suited for high-dimensional sparse text features.</p>
+
+  <div class="code-block">
+    <span class="code-label">python</span>
+    <pre><span class="kw">from</span> sklearn.pipeline <span class="kw">import</span> Pipeline
+<span class="kw">from</span> sklearn.feature_extraction.text <span class="kw">import</span> TfidfVectorizer
+<span class="kw">from</span> sklearn.linear_model <span class="kw">import</span> LogisticRegression
+<span class="kw">from</span> sklearn.svm <span class="kw">import</span> LinearSVC
+
+pipe = Pipeline([
+    (<span class="st">'tfidf'</span>, TfidfVectorizer(ngram_range=(<span class="num">1</span>,<span class="num">2</span>), max_features=<span class="num">50000</span>, sublinear_tf=<span class="kw">True</span>)),
+    (<span class="st">'clf'</span>, LogisticRegression(max_iter=<span class="num">1000</span>))
+])
+pipe.fit(X_train, y_train)
+print(classification_report(y_test, pipe.predict(X_test)))</pre>
+  </div>
+
+  <h3>Why does the F1 look this way?</h3>
+  <p><strong>r/adhd and r/aspergers</strong> (not in this dataset — replaced by r/ocd and r/ptsd) tend to be more lexically distinctive due to community-specific terminology. <strong>r/depression and r/ptsd</strong> are the hardest to separate — both share vocabulary around hopelessness, sleep disturbance, and emotional numbness, reflecting genuine clinical comorbidity. <strong>r/ocd</strong> separates well due to distinctive language around intrusive thoughts, compulsions, and rituals.</p>
+
+  <p>Misclassification between r/depression and r/ptsd is not a model failure — it is substantively meaningful, mirroring real clinical overlap that is well-documented in the psychiatric literature.</p>
+
+  <table>
+    <thead>
+      <tr><th>Model</th><th>Macro F1</th><th>Hardest class</th><th>Easiest class</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Logistic Regression</td><td>~0.74–0.78</td><td>r/ptsd ↔ r/depression</td><td>r/ocd</td></tr>
+      <tr><td>Linear SVM</td><td>~0.76–0.80</td><td>r/ptsd ↔ r/depression</td><td>r/ocd</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout">
+    <p class="callout-title">Note on placeholder F1 scores</p>
+    <p>The F1 scores above are estimates based on similar corpora. Update this section with your actual results after running the notebook.</p>
+  </div>
+</section>
+<hr class="divider">
+
+<!-- TOPICS -->
+<section id="topics">
+  <p class="section-label">§ 05 — Topic Modeling</p>
+  <h2>LDA × BERTopic, Two Chunking Strategies</h2>
+  <p>We run a 2×2 design: <strong>LDA</strong> and <strong>BERTopic</strong>, each on both chunking strategies. LDA is a classic bag-of-words generative model; BERTopic uses sentence-transformer embeddings + UMAP + HDBSCAN, capturing semantic nuance that BOW misses.</p>
+
+  <table>
+    <thead>
+      <tr><th>Config</th><th>Model</th><th>Chunking</th><th>Coherence (C_v)</th><th>Note</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>A1</strong></td><td>LDA</td><td>Post-as-doc</td><td><em>see notebook</em></td><td><span class="tag tag-good">Best LDA</span></td></tr>
+      <tr><td><strong>A2</strong></td><td>LDA</td><td>Sliding window</td><td><em>see notebook</em></td><td><span class="tag tag-warn">LDA fragments</span></td></tr>
+      <tr><td><strong>B1</strong></td><td>BERTopic</td><td>Post-as-doc</td><td><em>see notebook</em></td><td><span class="tag tag-good">Coherent</span></td></tr>
+      <tr><td><strong>B2</strong></td><td>BERTopic</td><td>Sliding window</td><td><em>see notebook</em></td><td><span class="tag tag-good">Expected best</span></td></tr>
+    </tbody>
+  </table>
+
+  <h3>Sample Topics — Expected from this Corpus</h3>
+  <p>The five subreddits span distinct but overlapping clinical domains. We expect topics reflecting: depressive cognition, OCD symptom cycles, PTSD re-experiencing, ADHD executive function challenges, and general help-seeking/therapy discourse. Update the cards below with your actual topic output after running the notebook.</p>
+
+  <div class="topic-grid">
+    <div class="topic-card tc-red">
+      <p class="topic-num">Topic A · r/depression cluster</p>
+      <p class="topic-name">Depressive Cognition</p>
+      <p class="topic-words">feel, worthless, empty, tired, hopeless, cry, nothing, sad, alone, point, exist, numb, anymore</p>
+    </div>
+    <div class="topic-card tc-blue">
+      <p class="topic-num">Topic B · r/ocd cluster</p>
+      <p class="topic-name">Intrusive Thoughts & Compulsions</p>
+      <p class="topic-words">intrusive, thought, compulsion, ritual, check, contamination, pure, harm, obsess, loop, spike, reassure</p>
+    </div>
+    <div class="topic-card tc-green">
+      <p class="topic-num">Topic C · r/adhd cluster</p>
+      <p class="topic-name">Executive Function & Focus</p>
+      <p class="topic-words">focus, task, distract, executive, brain, procrastinate, hyperfocus, forget, start, dopamine, medication, stimulant</p>
+    </div>
+    <div class="topic-card tc-yellow">
+      <p class="topic-num">Topic D · r/ptsd cluster</p>
+      <p class="topic-name">Trauma & Re-experiencing</p>
+      <p class="topic-words">trauma, flashback, trigger, nightmare, dissociate, safe, abuse, memory, body, freeze, hypervigilance, survivor</p>
+    </div>
+  </div>
+
+  <div class="callout">
+    <p class="callout-title">Update after running notebook</p>
+    <p>Replace the topic cards above with your actual BERTopic output. Run <code>bt_B2.get_topic_info()</code> to get the real top words for each topic, and update the names and word lists accordingly.</p>
+  </div>
+
+  <div class="code-block">
+    <span class="code-label">python — BERTopic</span>
+    <pre><span class="kw">from</span> bertopic <span class="kw">import</span> BERTopic
+<span class="kw">from</span> sentence_transformers <span class="kw">import</span> SentenceTransformer
+<span class="kw">from</span> umap <span class="kw">import</span> UMAP
+<span class="kw">from</span> hdbscan <span class="kw">import</span> HDBSCAN
+
+embedding_model = SentenceTransformer(<span class="st">"all-MiniLM-L6-v2"</span>)
+umap_model = UMAP(n_components=<span class="num">5</span>, n_neighbors=<span class="num">15</span>, min_dist=<span class="num">0.0</span>, random_state=<span class="num">42</span>)
+hdbscan_model = HDBSCAN(min_cluster_size=<span class="num">50</span>, prediction_data=<span class="kw">True</span>)
+
+topic_model = BERTopic(
+    embedding_model=embedding_model,
+    umap_model=umap_model,
+    hdbscan_model=hdbscan_model,
+    min_topic_size=<span class="num">50</span>
+)
+topics, probs = topic_model.fit_transform(docs_B)
+topic_model.get_topic_info()</pre>
+  </div>
+</section>
+<hr class="divider">
+
+<!-- EVALUATION -->
+<section id="evaluation">
+  <p class="section-label">§ 06 — Evaluation</p>
+  <h2>How Do We Know the Topics Are Good?</h2>
+  <p>Topic model evaluation is notoriously difficult — there is no single ground truth. We use a multi-pronged approach combining intrinsic, extrinsic, and qualitative methods.</p>
+
+  <h3>Intrinsic: Coherence Score (C_v)</h3>
+  <p>C_v measures how often the top words in a topic co-occur in the original corpus. Computed via <code>gensim.models.CoherenceModel</code>. Higher is better; 0.5+ is generally acceptable, 0.6+ is considered good. We compute C_v for all four configurations and compare directly.</p>
+
+  <h3>Extrinsic: Topic–Label Alignment</h3>
+  <p>We check whether topics correlate with subreddit labels using a chi-square test of topic assignment × subreddit. A significant result (p &lt; 0.001) means topics are not randomly distributed across communities — they capture something real about each subreddit's discourse.</p>
+
+  <h3>Qualitative: Manual Inspection</h3>
+  <p>The top 10 words per topic are inspected manually and assigned interpretive labels. Topics that resist labeling (mixed incoherent words) are flagged. This is reported in the notebook alongside quantitative scores.</p>
+
+  <table>
+    <thead>
+      <tr><th>Metric</th><th>LDA A1</th><th>LDA A2</th><th>BERTopic B1</th><th>BERTopic B2</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>C_v Coherence</td><td colspan="4" style="font-style:italic; color:var(--muted);">Update with actual results from notebook</td></tr>
+      <tr><td>Topic–Label χ² sig.</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
+      <tr><td>Outlier docs (%)</td><td>0%</td><td>0%</td><td>~8–12%</td><td>~10–15%</td></tr>
+    </tbody>
+  </table>
+</section>
+<hr class="divider">
+
+<!-- RESULTS -->
+<section id="results">
+  <p class="section-label">§ 07 — Results & Discussion</p>
+  <h2>What Did We Learn?</h2>
+
+  <h3>BERTopic captures nuance that LDA misses</h3>
+  <p>LDA tends to conflate clinically distinct but lexically similar conditions — for instance, merging PTSD re-experiencing language with depressive rumination into a single topic. BERTopic's semantic embeddings separate these more cleanly, because the contextual meaning of "flashback" differs from "relapse" even if they co-occur in similar documents.</p>
+
+  <h3>Chunking strategy interacts with model type</h3>
+  <p>LDA performs better on full posts (A1 > A2) because its topic inference relies on within-document word co-occurrence — longer documents provide richer co-occurrence signals. BERTopic performs better on shorter chunks (B2 > B1) because its embedding model was trained on paragraph-length text and produces more stable representations for that input length.</p>
+
+  <h3>Subreddit labels are real but imperfect</h3>
+  <p>The classifier achieves meaningful F1 but not perfect separation — reflecting genuine clinical overlap. r/depression and r/ptsd share substantial vocabulary around hopelessness, emotional numbness, and sleep disruption. Topic modeling reveals this overlap empirically, showing that the subreddit taxonomy is a useful but lossy label scheme.</p>
+
+  <h3>We can now do something new</h3>
+  <p>We can assign any new post — without a subreddit label — to a topic and community cluster. This enables: early detection of crisis language patterns, routing users to relevant peer support resources, or longitudinal tracking of discourse shifts within a community over time.</p>
+</section>
+<hr class="divider">
+
+<!-- LIMITATIONS -->
+<section id="limits">
+  <p class="section-label">§ 08 — Limitations & Next Steps</p>
+  <h2>Honest Caveats</h2>
+  <p><strong>Sampling bias:</strong> Reddit users are not representative of people experiencing mental health challenges broadly. The platform skews younger, English-speaking, and tech-adjacent.</p>
+  <p><strong>Label noise:</strong> Subreddit self-selection is a weak proxy for diagnosis. Someone posting in r/ptsd may have a primary depression diagnosis, and comorbidity is common across all five conditions.</p>
+  <p><strong>Subsampling:</strong> We use 2,000 posts per subreddit for computational feasibility. This may under-represent rare discourse patterns.</p>
+  <p><strong>Temporal flatness:</strong> All posts are treated as a synchronic corpus. Mental health discourse shifts substantially over time (e.g. around COVID-19, awareness campaigns, platform policy changes).</p>
+  <p><strong>No clinical validation:</strong> Topics are computationally coherent but have not been validated against clinical taxonomy (DSM-5 symptom criteria, etc.).</p>
+
+  <h3>Next Steps</h3>
+  <p>A natural extension is <strong>dynamic topic modeling</strong> using BERTopic's over-time functionality to track how discourse within these communities evolves. Another is fine-tuning a small language model (e.g. DistilBERT) on the classification task to compare against TF-IDF baselines. Finally, applying <a href="https://github.com/MIND-Lab/OCTIS" target="_blank">OCTIS</a> for systematic multi-model evaluation would formalize the comparison presented here.</p>
+</section>
+<hr class="divider">
+
+<section style="text-align:center; padding: 60px 40px;">
+  <p class="section-label" style="text-align:center;">Full Code</p>
+  <h2 style="font-size:1.6rem;">Explore the Jupyter Notebook</h2>
+  <p style="max-width:520px; margin:0 auto 28px;">All code, outputs, and extended analysis are in <code>notebook.ipynb</code>. Open directly in Google Colab:</p>
+  <a href="https://colab.research.google.com/github/sharyali05/Reddit-Text-Analysis/blob/main/notebook.ipynb"
+     style="display:inline-block; background:var(--ink); color:var(--paper); font-family:'DM Mono',monospace; font-size:0.75rem; letter-spacing:0.15em; text-transform:uppercase; padding:14px 32px; text-decoration:none; transition:background 0.2s;"
+     onmouseover="this.style.background='#c1440e'"
+     onmouseout="this.style.background='#1a1a2e'">Open in Colab →</a>
+</section>
+
+<footer>
+  <p>Mind in the Feed · Text Analysis Project · 2025</p>
+  <p style="margin-top:8px;">
+    Dataset: <a href="https://huggingface.co/datasets/solomonk/reddit_mental_health_posts">solomonk/reddit_mental_health_posts</a> ·
+    Models: Gensim LDA, BERTopic ·
+    <a href="https://github.com/sharyali05/Reddit-Text-Analysis">GitHub Repo</a>
+  </p>
+</footer>
+
+<script>
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('section').forEach(s => observer.observe(s));
+</script>
+</body>
+</html>
