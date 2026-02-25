@@ -3,7 +3,7 @@
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sharyali05/Reddit-Text-Analysis/blob/main/notebook.ipynb)
 
-As a student interested in the field of Psychology and having studied it in undergrad, I have always been interested in the many Mental Health Communities that exist in Reddit. A text analysis project applying **LDA** and **BERTopic** across two chunking strategies to Reddit mental health posts, with supervised classification and comprehensive evaluation.
+As a student interested in the field of Psychology and having studied it in undergrad, I have always been interested in the many Mental Health Communities that exist in Reddit. Through this text analysis, I apply **LDA** and **BERTopic** across two chunking strategies to Reddit mental health posts, with supervised classification and comprehensive evaluation.
 
 ---
 
