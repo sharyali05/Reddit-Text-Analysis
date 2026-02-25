@@ -538,7 +538,7 @@
   <p class="section-label">§ 01 — Dataset Selection</p>
   <h2>Why Reddit Mental Health?</h2>
   <p>Mental health discourse on Reddit is one of the most documented, longitudinal, and openly accessible collections of authentic first-person emotional writing on the internet. Users self-disclose with remarkable candor, producing language that is simultaneously personal and patterned — ideal for topic modeling.</p>
-  <p>We use the <strong>Reddit Mental Health Posts</strong> dataset (<code>solomonk/reddit_mental_health_posts</code>) sourced via the HuggingFace <code>datasets</code> library. It contains 151k posts from five neurodevelopmental and psychiatric subreddits, subsampled to 2,000 per community for computational feasibility:</p>
+  <p>Used the <strong>Reddit Mental Health Posts</strong> dataset (<code>solomonk/reddit_mental_health_posts</code>) sourced via the HuggingFace <code>datasets</code> library. It contains 151k posts from five neurodevelopmental and psychiatric subreddits, subsampled to 2,000 per community for computational feasibility:</p>
 
   <div class="stats-grid">
     <div class="stat-card">
@@ -620,7 +620,7 @@ print(df[<span class="st">'subreddit'</span>].value_counts())</pre>
 <section id="chunking">
   <p class="section-label">§ 03 — Chunking Strategy</p>
   <h2>Two Strategies, One Question</h2>
-  <p>Chunking determines the unit of analysis passed to each topic model. Too small and topics fragment into noise; too large and distinct themes blur together. We compare two strategies to assess how document granularity shapes topic recovery.</p>
+  <p>Chunking determines the unit of analysis passed to each topic model. Too small and topics fragment into noise; too large and distinct themes blur together. Two strategies are compared to assess how document granularity shapes topic recovery.</p>
 
   <div class="chunk-vis">
     <div class="chunk-strategy">
@@ -651,7 +651,7 @@ print(df[<span class="st">'subreddit'</span>].value_counts())</pre>
 
   <div class="callout">
     <p class="callout-title">Testing the chunking strategy</p>
-    <p>We test chunking quality by: (1) comparing C_v coherence scores across all four configurations; (2) measuring type-token ratio as a proxy for lexical diversity; and (3) checking the rate of suspiciously short chunks (&lt;15 words) as a sign of over-splitting. Strategy A wins on LDA coherence; Strategy B wins on BERTopic embedding quality.</p>
+    <p>Chunking quality is tested by: (1) comparing C_v coherence scores across all four configurations; (2) measuring type-token ratio as a proxy for lexical diversity; and (3) checking the rate of suspiciously short chunks (&lt;15 words) as a sign of over-splitting. Strategy A wins on LDA coherence; Strategy B wins on BERTopic embedding quality.</p>
   </div>
 
   <div class="code-block">
@@ -674,7 +674,7 @@ df_B = df.explode(<span class="st">'chunks_B'</span>)  <span class="cm"># one ro
 <section id="supervised">
   <p class="section-label">§ 04 — Supervised Classification</p>
   <h2>Predicting Subreddit from Text</h2>
-  <p>The subreddit name is our existing label. We train a <strong>Logistic Regression</strong> and a <strong>Linear SVM</strong> on TF-IDF features (unigrams + bigrams) using Strategy A (full posts), since labels are post-level. Both are interpretable and well-suited for high-dimensional sparse text features.</p>
+  <p>The subreddit name is our existing label. Trained via a <strong>Logistic Regression</strong> and a <strong>Linear SVM</strong> on TF-IDF features (unigrams + bigrams) using Strategy A (full posts), since labels are post-level. Both are interpretable and well-suited for high-dimensional sparse text features.</p>
 
   <div class="code-block">
     <span class="code-label">python</span>
@@ -717,7 +717,7 @@ print(classification_report(y_test, pipe.predict(X_test)))</pre>
 <section id="topics">
   <p class="section-label">§ 05 — Topic Modeling</p>
   <h2>LDA × BERTopic, Two Chunking Strategies</h2>
-  <p>We run a 2×2 design: <strong>LDA</strong> and <strong>BERTopic</strong>, each on both chunking strategies. LDA is a classic bag-of-words generative model; BERTopic uses sentence-transformer embeddings + UMAP + HDBSCAN, capturing semantic nuance that BOW misses.</p>
+  <p>A 2×2 design: <strong>LDA</strong> and <strong>BERTopic</strong>, each on both chunking strategies. LDA is a classic bag-of-words generative model; BERTopic uses sentence-transformer embeddings + UMAP + HDBSCAN, capturing semantic nuance that BOW misses.</p>
 
   <table>
     <thead>
@@ -732,7 +732,7 @@ print(classification_report(y_test, pipe.predict(X_test)))</pre>
   </table>
 
   <h3>Sample Topics — Expected from this Corpus</h3>
-  <p>The five subreddits span distinct but overlapping clinical domains. We expect topics reflecting: depressive cognition, OCD symptom cycles, PTSD re-experiencing, ADHD executive function challenges, and general help-seeking/therapy discourse. Update the cards below with your actual topic output after running the notebook.</p>
+  <p>The five subreddits span distinct but overlapping clinical domains. I expect topics reflecting: depressive cognition, OCD symptom cycles, PTSD re-experiencing, ADHD executive function challenges, and general help-seeking/therapy discourse. Update the cards below with your actual topic output after running the notebook.</p>
 
   <div class="topic-grid">
     <div class="topic-card tc-red">
@@ -788,14 +788,14 @@ topic_model.get_topic_info()</pre>
 <!-- EVALUATION -->
 <section id="evaluation">
   <p class="section-label">§ 06 — Evaluation</p>
-  <h2>How Do We Know the Topics Are Good?</h2>
-  <p>Topic model evaluation is notoriously difficult — there is no single ground truth. We use a multi-pronged approach combining intrinsic, extrinsic, and qualitative methods.</p>
+  <h2>How Do I Know the Topics Are Good?</h2>
+  <p>Topic model evaluation is notoriously difficult — there is no single ground truth. I use a multi-pronged approach combining intrinsic, extrinsic, and qualitative methods.</p>
 
   <h3>Intrinsic: Coherence Score (C_v)</h3>
-  <p>C_v measures how often the top words in a topic co-occur in the original corpus. Computed via <code>gensim.models.CoherenceModel</code>. Higher is better; 0.5+ is generally acceptable, 0.6+ is considered good. We compute C_v for all four configurations and compare directly.</p>
+  <p>C_v measures how often the top words in a topic co-occur in the original corpus. Computed via <code>gensim.models.CoherenceModel</code>. Higher is better; 0.5+ is generally acceptable, 0.6+ is considered good. I compute C_v for all four configurations and compare directly.</p>
 
   <h3>Extrinsic: Topic–Label Alignment</h3>
-  <p>We check whether topics correlate with subreddit labels using a chi-square test of topic assignment × subreddit. A significant result (p &lt; 0.001) means topics are not randomly distributed across communities — they capture something real about each subreddit's discourse.</p>
+  <p>I check whether topics correlate with subreddit labels using a chi-square test of topic assignment × subreddit. A significant result (p &lt; 0.001) means topics are not randomly distributed across communities — they capture something real about each subreddit's discourse.</p>
 
   <h3>Qualitative: Manual Inspection</h3>
   <p>The top 10 words per topic are inspected manually and assigned interpretive labels. Topics that resist labeling (mixed incoherent words) are flagged. This is reported in the notebook alongside quantitative scores.</p>
@@ -816,7 +816,7 @@ topic_model.get_topic_info()</pre>
 <!-- RESULTS -->
 <section id="results">
   <p class="section-label">§ 07 — Results & Discussion</p>
-  <h2>What Did We Learn?</h2>
+  <h2>What Did I Learn?</h2>
 
   <h3>BERTopic captures nuance that LDA misses</h3>
   <p>LDA tends to conflate clinically distinct but lexically similar conditions — for instance, merging PTSD re-experiencing language with depressive rumination into a single topic. BERTopic's semantic embeddings separate these more cleanly, because the contextual meaning of "flashback" differs from "relapse" even if they co-occur in similar documents.</p>
@@ -827,8 +827,8 @@ topic_model.get_topic_info()</pre>
   <h3>Subreddit labels are real but imperfect</h3>
   <p>The classifier achieves meaningful F1 but not perfect separation — reflecting genuine clinical overlap. r/depression and r/ptsd share substantial vocabulary around hopelessness, emotional numbness, and sleep disruption. Topic modeling reveals this overlap empirically, showing that the subreddit taxonomy is a useful but lossy label scheme.</p>
 
-  <h3>We can now do something new</h3>
-  <p>We can assign any new post — without a subreddit label — to a topic and community cluster. This enables: early detection of crisis language patterns, routing users to relevant peer support resources, or longitudinal tracking of discourse shifts within a community over time.</p>
+  <h3>I can now do something new</h3>
+  <p>I can assign any new post — without a subreddit label — to a topic and community cluster. This enables: early detection of crisis language patterns, routing users to relevant peer support resources, or longitudinal tracking of discourse shifts within a community over time.</p>
 </section>
 <hr class="divider">
 
@@ -838,7 +838,7 @@ topic_model.get_topic_info()</pre>
   <h2>Honest Caveats</h2>
   <p><strong>Sampling bias:</strong> Reddit users are not representative of people experiencing mental health challenges broadly. The platform skews younger, English-speaking, and tech-adjacent.</p>
   <p><strong>Label noise:</strong> Subreddit self-selection is a weak proxy for diagnosis. Someone posting in r/ptsd may have a primary depression diagnosis, and comorbidity is common across all five conditions.</p>
-  <p><strong>Subsampling:</strong> We use 2,000 posts per subreddit for computational feasibility. This may under-represent rare discourse patterns.</p>
+  <p><strong>Subsampling:</strong> I use 2,000 posts per subreddit for computational feasibility. This may under-represent rare discourse patterns.</p>
   <p><strong>Temporal flatness:</strong> All posts are treated as a synchronic corpus. Mental health discourse shifts substantially over time (e.g. around COVID-19, awareness campaigns, platform policy changes).</p>
   <p><strong>No clinical validation:</strong> Topics are computationally coherent but have not been validated against clinical taxonomy (DSM-5 symptom criteria, etc.).</p>
 
